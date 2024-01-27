@@ -10,23 +10,17 @@ const gridHeight = canvas.height / blockSize;
 const grid = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
 
 const purpleBlock = {
-  x: canvas.width - blockSize,
-  y: canvas.height / 2,
+  position: { x: canvas.width - blockSize, y: canvas.height / 2 },
+  size: { width: blockSize, height: blockSize },
   color: 'purple',
-  dx: blockSpeed,
-  dy: 1.5,
-  width: blockSize,
-  height: blockSize
+  velocity: { x: Math.random() * 2 - 0.9, y: Math.random() * 2 - 0.9 },
 };
 
 const yellowBlock = {
-  x: 0,
-  y: canvas.height / 2,
-  color: 'yellow',
-  dx: -blockSpeed,
-  dy: -1.5,
-  width: blockSize,
-  height: blockSize
+  position: { x: 0, y: canvas.height / 2 },
+  size: { width: blockSize, height: blockSize },
+  color: 'yellow',  
+  velocity: { x: Math.random() * 2 - 0.9, y: Math.random() * 2 - 0.9 },
 };
 
 function drawGrid() {
@@ -40,7 +34,7 @@ function drawGrid() {
 
 function drawBlock(block) {
   ctx.fillStyle = block.color;
-  ctx.fillRect(block.x, block.y, block.width, block.height);
+  ctx.fillRect(block.position.x, block.position.y, block.size.width, block.size.height);
 }
 
 function checkCollision(x, y, color) {
@@ -55,36 +49,40 @@ function checkCollision(x, y, color) {
 }
 
 function updateBlock(block) {
-  const x = block.dx > 0 ? Math.ceil(block.x / blockSize) : Math.floor(block.x / blockSize);
-  const y = Math.floor(block.y / blockSize);
-  const dx = block.dx / blockSize;
-  const dy = block.dy / blockSize;
-  const newX = Math.round(x + dx);
-  const newY = Math.round(y + dy);
-  if (checkCollision(newX, newY, block.color)) {
-//    block.color = block.color === 'purple' ? 'yellow' : 'purple';
-	grid[newY][newX] = block.color === 'purple' ? 'yellow' : 'purple';
-	block.dx *= -1;
-	block.dy *= -1;
+  const { x, y } = block.position;
+  const { width, height } = block.size;
+  const { x: vx, y: vy } = block.velocity;
+
+  const newX = x + vx + (vx > 0 ? width : 0);
+  const newY = y + vy + (vy > 0 ? height : 0);
+
+  const gridX = Math.floor(newX / blockSize);
+  const gridY = Math.floor(newY / blockSize);
+
+  if (checkCollision(gridX, gridY, block.color)) {
+	grid[gridY][gridX] = block.color === 'purple' ? 'yellow' : 'purple';
+    block.velocity.x *= -1;
+    block.velocity.y *= -1;
   } else {
-    block.x += block.dx;
-    block.y += block.dy;
+    block.position.x += block.velocity.x;
+    block.position.y += block.velocity.y;
   }
-  if (block.x < 0) {
-    block.x = 0;
-    block.dx = -block.dx;
+
+  if (newX < 0) {
+    block.position.x = 0;
+    block.velocity.x = -block.velocity.x;
   }
-  if (block.x + block.width > canvas.width) {
-    block.x = canvas.width - block.width;
-    block.dx = -block.dx;
+  if (newX + width > canvas.width) {
+    block.position.x = canvas.width - width;
+    block.velocity.x = -block.velocity.x;
   }
-  if (block.y < 0) {
-    block.y = 0;
-    block.dy = -block.dy;
+  if (newY < 0) {
+    block.position.y = 0;
+    block.velocity.y = -block.velocity.y;
   }
-  if (block.y + block.height > canvas.height) {
-    block.y = canvas.height - block.height;
-    block.dy = -block.dy;
+  if (newY + height > canvas.height) {
+    block.position.y = canvas.height - height;
+    block.velocity.y = -block.velocity.y;
   }
 }
 
@@ -101,10 +99,19 @@ function update() {
   requestAnimationFrame(update);
 }
 
+function generateVector(block) {
+  const vectorLength = Math.sqrt(Math.pow(blockSpeed, 2) * 2);
+  const angle = Math.random() * Math.PI * 2;
+  block.velocity.x = vectorLength * Math.cos(angle);
+  block.velocity.y = vectorLength * Math.sin(angle);
+}
+
 for (let y = 0; y < gridHeight; y++) {
   for (let x = 0; x < gridWidth; x++) {
       grid[y][x] = (x >= (gridWidth / 2)) ? 'yellow' : 'purple';
   }
 }
-  
+generateVector(purpleBlock)
+generateVector(yellowBlock)
+
 update();
