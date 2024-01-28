@@ -7,8 +7,6 @@ const blockSpeed = 2;
 const gridWidth = canvas.width / blockSize;
 const gridHeight = canvas.height / blockSize;
 
-const grid = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
-
 const cellGrid = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
 
 class cell {
@@ -62,8 +60,25 @@ function checkCollision(x, y, color) {
 }
 
 function updateBlock(block) {
-	const gX = (block.x + block.vx) / block.width;
-	const gY = (block.y + block.vy) / block.height;
+	const nX = (block.x + block.vx);
+	const nY = (block.y + block.vy);
+	const gX = nX / block.width;
+	const gY = nY / block.height;
+	
+	// If nX or nY is outside canvas bounch it; no need for any other checks
+	if(
+		(nX < 0) || 
+		(nX + block.width > canvas.width)
+	) { block.vx *= -1; return; }
+	if(
+		(nY < 0) ||
+		(nY + block.height > canvas.height)
+	) { block.vy *= -1; return; }
+	//Since where still here check if collision with the grid
+	
+	block.x += block.vx;
+	block.y += block.vy;
+	
 //	console.log($'X:{gX}; Y:{gY}');
 	/*
   const { x, y } = block.position;
@@ -116,21 +131,10 @@ function update() {
   requestAnimationFrame(update);
 }
 
-function generateVector(block) {
-	/*
-  const vectorLength = Math.sqrt(Math.pow(blockSpeed, 2) * 2);
-  const angle = Math.random() * Math.PI * 2;
-  block.velocity.x = vectorLength * Math.cos(angle);
-  block.velocity.y = vectorLength * Math.sin(angle);
-  */
-}
-
 for (let y = 0; y < gridHeight; y++) {
   for (let x = 0; x < gridWidth; x++) {
 	  cellGrid[y][x] = new cell(x * blockSize, y * blockSize, blockSize, blockSize, (x < (gridWidth / 2)))
   }
 }
-generateVector(purpleBlock)
-generateVector(yellowBlock)
 
 update();
