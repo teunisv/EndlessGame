@@ -4,6 +4,9 @@ const ctx = canvas.getContext('2d');
 const blockSize = 20;
 const blockSpeed = 2;
 
+const PURPLE = "#4d3c88";
+const YELLOW = "#f0ac31";
+
 const gridWidth = canvas.width / blockSize;
 const gridHeight = canvas.height / blockSize;
 
@@ -15,7 +18,7 @@ class cell {
 		this.y = y;
 		this.width = width;
 		this.height = height;
-		this.color = isPurple ? "purple" : "yellow";
+		this.color = isPurple ? PURPLE : YELLOW;
 	}
 	
 	Draw(ctx) {
@@ -47,7 +50,7 @@ class cell {
 	}
 	
 	flipColor() {
-		this.color = this.color === "purple" ? "yellow" : "purple";
+		this.color = this.color === PURPLE ? YELLOW : PURPLE;
 	}
 }
 
@@ -79,9 +82,11 @@ function drawGrid() {
 function checkCollision(x, y, block) {
 	//Is it outside the grid ?
 	if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) {
-		return {L: 0, T: 0, B: 0, R: 0, U: 0};
+		return;
 	}
-	return cellGrid[y][x].checkCollision(block);
+	const cell = cellGrid[y][x];
+	const cc = cell.checkCollision(block);
+	return {cell, cc };
 }
 
 function flipGrid(x,y, ltrbu, block) {
@@ -107,17 +112,18 @@ function updateBlock(block) {
 		(nY + block.height > canvas.height)
 	) { block.vy *= -1; return; }
 	//Since where still here check if collision with the grid
-	const c1 = checkCollision(Math.floor(gX), Math.floor(gY), block);
-	const c2 = checkCollision(Math.floor(gX), Math.ceil(gY), block);
-	const c3 = checkCollision(Math.ceil(gX), Math.floor(gY), block);
-	const c4 = checkCollision(Math.ceil(gX), Math.ceil(gY), block);
-	const U = Math.max(c1.U,c2.U,c3.U,c4.U);
+	const overlaps = [
+		checkCollision(Math.floor(gX), Math.floor(gY), block),
+		checkCollision(Math.floor(gX), Math.ceil(gY), block),
+		checkCollision(Math.ceil(gX), Math.floor(gY), block),
+		checkCollision(Math.ceil(gX), Math.ceil(gY), block)];
+	const U = Math.max(...overlaps.map(o => o.cc.U));
 	if(U > 0)
 	{		
-		if(U === c1.U) flipGrid(Math.floor(gX), Math.floor(gY), c1, block);
-		else if(U === c2.U) flipGrid(Math.floor(gX), Math.ceil(gY), c2, block);		
-		else if(U === c3.U) flipGrid(Math.ceil(gX), Math.floor(gY), c3, block);
-		else if(U === c4.U) flipGrid(Math.ceil(gX), Math.ceil(gY), c4, block);
+		const collision = overlaps.find(o => o.cc.U === U);
+		collision.cell.flipColor();
+		if(collision.cc.L === collision.cc.U || collision.cc.R === collision.cc.U) { block.vx *= -1;} 
+		else { block.vy *= -1; }
 		return;
 	}
 	
