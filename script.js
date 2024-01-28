@@ -22,6 +22,22 @@ class cell {
 		ctx.fillStyle = this.color;
 		ctx.fillRect(this.x, this.y, this.width, this.height);
 	}
+	
+	checkCollision(block) {
+		//Diffrent colors do not collied
+		if(this.color != block.color) return {L: 0, T: 0, B: 0, R: 0};
+		const { fx1, fy1, fx2, fy2} = block.getFutureSelf();
+		
+		const xOverlap = Math.max(0, Math.min(this.x + this.width, fx2) - Math.max(this.x, fx1));
+		const yOverlap = Math.max(0, Math.min(this.y + this.height, fy2) - Math.max(this.y, fy1));
+
+		const L = xOverlap / this.width;
+		const T = yOverlap / this.height;
+		const R = xOverlap / block.width;
+		const B = yOverlap / block.height;
+
+		return { L, T, R, B };
+	}
 }
 
 class movingCell extends cell {
@@ -31,6 +47,10 @@ class movingCell extends cell {
 		const angle = Math.random() * Math.PI * 2;
 		this.vx = vectorLength * Math.cos(angle);
 		this.vy = vectorLength * Math.sin(angle);
+	}
+	
+	getFutureSelf() {
+		return { fx1: this.x + this.vx, fy1: this.y + this.vy, fx2: this.x + this.vx + this.width, fy2: this.y + this.vy + this.height };
 	}
 }
 
@@ -46,17 +66,12 @@ function drawGrid() {
   }
 }
 
-function checkCollision(x, y, color) {
-	/*
-  if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) {
-    return false;
-  }
-  const cellColor = grid[y][x];
-  if (cellColor === color) {
-    return true;
-  }
-  return false;
-  */
+function checkCollision(x, y, block) {
+	//Is it outside the grid ?
+	if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) {
+		return {L: 0, T: 0, B: 0, R: 0};
+	}
+	return cellGrid[y][x].checkCollision(block);
 }
 
 function updateBlock(block) {
@@ -75,6 +90,10 @@ function updateBlock(block) {
 		(nY + block.height > canvas.height)
 	) { block.vy *= -1; return; }
 	//Since where still here check if collision with the grid
+	checkCollision(Math.floor(gX), Math.floor(gY), block);
+	checkCollision(Math.floor(gX), Math.ceil(gY), block);
+	checkCollision(Math.ceil(gX), Math.floor(gY), block);
+	checkCollision(Math.ceil(gX), Math.ceil(gY), block);
 	
 	block.x += block.vx;
 	block.y += block.vy;
@@ -125,7 +144,7 @@ function update() {
   updateBlock(yellowBlock);
   
   drawGrid();
-  purpleBlock.Draw(ctx);
+  //purpleBlock.Draw(ctx);
   yellowBlock.Draw(ctx);
 
   requestAnimationFrame(update);
