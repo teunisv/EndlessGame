@@ -25,18 +25,29 @@ class cell {
 	
 	checkCollision(block) {
 		//Diffrent colors do not collied
-		if(this.color != block.color) return {L: 0, T: 0, B: 0, R: 0};
-		const { fx1, fy1, fx2, fy2} = block.getFutureSelf();
+		if(this.color != block.color) return {L: 0, T: 0, B: 0, R: 0, U: 0};
+		const fblock = block.getFutureSelf();
 		
-		const xOverlap = Math.max(0, Math.min(this.x + this.width, fx2) - Math.max(this.x, fx1));
-		const yOverlap = Math.max(0, Math.min(this.y + this.height, fy2) - Math.max(this.y, fy1));
+		const left = Math.max(this.x, fblock.x);
+		const right = Math.min(this.x + this.width, fblock.x + fblock.width);
+		const top = Math.max(this.y, fblock.y);
+		const bottom = Math.min(this.y + this.height, fblock.y + fblock.height);
+		
+		const xOverlap = Math.max(0, right - left);
+		const yOverlap = Math.max(0, bottom - top);
 
-		const L = xOverlap / this.width;
-		const T = yOverlap / this.height;
-		const R = xOverlap / block.width;
-		const B = yOverlap / block.height;
+		const B = left > this.x ? 0 : xOverlap / this.width;
+		const R = top > this.y ? 0 : yOverlap / this.height;
+		const T = right < (this.x + this.width) ? 0 : xOverlap / fblock.width;
+		const L = bottom < (this.y + this.height) ? 0 : yOverlap / fblock.height;
+		const U = Math.max(L, T, R, B)
+	
+		return { L, T, R, B, U };
 
-		return { L, T, R, B };
+	}
+	
+	flipColor() {
+		this.color = this.color === "purple" ? "yellow" : "purple";
 	}
 }
 
@@ -50,12 +61,11 @@ class movingCell extends cell {
 	}
 	
 	getFutureSelf() {
-		return { fx1: this.x + this.vx, fy1: this.y + this.vy, fx2: this.x + this.vx + this.width, fy2: this.y + this.vy + this.height };
+		return { x: this.x + this.vx, y: this.y + this.vy, width: this.width, height: this.height };
 	}
 }
 
 const purpleBlock = new movingCell(canvas.width - blockSize,canvas.height / 2- blockSize/2,blockSize,blockSize, true); 
-
 const yellowBlock = new movingCell(0,canvas.height / 2 - blockSize/2,blockSize,blockSize, false); 
 
 function drawGrid() {
@@ -69,9 +79,16 @@ function drawGrid() {
 function checkCollision(x, y, block) {
 	//Is it outside the grid ?
 	if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) {
-		return {L: 0, T: 0, B: 0, R: 0};
+		return {L: 0, T: 0, B: 0, R: 0, U: 0};
 	}
 	return cellGrid[y][x].checkCollision(block);
+}
+
+function flipGrid(x,y, ltrbu, block) {
+	cellGrid[y][x].flipColor();
+		
+	if(ltrbu.L === ltrbu.U || ltrbu.R === ltrbu.U) { block.vx *= -1;} 
+	else { block.vy *= -1; }
 }
 
 function updateBlock(block) {
@@ -90,51 +107,22 @@ function updateBlock(block) {
 		(nY + block.height > canvas.height)
 	) { block.vy *= -1; return; }
 	//Since where still here check if collision with the grid
-	checkCollision(Math.floor(gX), Math.floor(gY), block);
-	checkCollision(Math.floor(gX), Math.ceil(gY), block);
-	checkCollision(Math.ceil(gX), Math.floor(gY), block);
-	checkCollision(Math.ceil(gX), Math.ceil(gY), block);
+	const c1 = checkCollision(Math.floor(gX), Math.floor(gY), block);
+	const c2 = checkCollision(Math.floor(gX), Math.ceil(gY), block);
+	const c3 = checkCollision(Math.ceil(gX), Math.floor(gY), block);
+	const c4 = checkCollision(Math.ceil(gX), Math.ceil(gY), block);
+	const U = Math.max(c1.U,c2.U,c3.U,c4.U);
+	if(U > 0)
+	{		
+		if(U === c1.U) flipGrid(Math.floor(gX), Math.floor(gY), c1, block);
+		else if(U === c2.U) flipGrid(Math.floor(gX), Math.ceil(gY), c2, block);		
+		else if(U === c3.U) flipGrid(Math.ceil(gX), Math.floor(gY), c3, block);
+		else if(U === c4.U) flipGrid(Math.ceil(gX), Math.ceil(gY), c4, block);
+		return;
+	}
 	
 	block.x += block.vx;
 	block.y += block.vy;
-	
-//	console.log($'X:{gX}; Y:{gY}');
-	/*
-  const { x, y } = block.position;
-  const { width, height } = block.size;
-  const { x: vx, y: vy } = block.velocity;
-
-  const newX = x + vx + (vx > 0 ? width : 0);
-  const newY = y + vy + (vy > 0 ? height : 0);
-
-  const gridX = Math.floor(newX / blockSize);
-  const gridY = Math.floor(newY / blockSize);
-
-  if (checkCollision(gridX, gridY, block.color)) {
-	grid[gridY][gridX] = block.color === 'purple' ? 'yellow' : 'purple';
-    block.velocity.x *= -1;
-    block.velocity.y *= -1;
-  } else {
-    block.position.x += block.velocity.x;
-    block.position.y += block.velocity.y;
-  }
-
-  if (newX < 0) {
-    block.position.x = 0;
-    block.velocity.x = -block.velocity.x;
-  }
-  if (newX + width > canvas.width) {
-    block.position.x = canvas.width - width;
-    block.velocity.x = -block.velocity.x;
-  }
-  if (newY < 0) {
-    block.position.y = 0;
-    block.velocity.y = -block.velocity.y;
-  }
-  if (newY + height > canvas.height) {
-    block.position.y = canvas.height - height;
-    block.velocity.y = -block.velocity.y;
-  }*/
 }
 
 function update() {
@@ -144,7 +132,7 @@ function update() {
   updateBlock(yellowBlock);
   
   drawGrid();
-  //purpleBlock.Draw(ctx);
+  purpleBlock.Draw(ctx);
   yellowBlock.Draw(ctx);
 
   requestAnimationFrame(update);
