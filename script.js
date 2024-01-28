@@ -9,35 +9,47 @@ const gridHeight = canvas.height / blockSize;
 
 const grid = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
 
-const purpleBlock = {
-  position: { x: canvas.width - blockSize, y: canvas.height / 2 },
-  size: { width: blockSize, height: blockSize },
-  color: 'purple',
-  velocity: { x: Math.random() * 2 - 0.9, y: Math.random() * 2 - 0.9 },
-};
+const cellGrid = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
 
-const yellowBlock = {
-  position: { x: 0, y: canvas.height / 2 },
-  size: { width: blockSize, height: blockSize },
-  color: 'yellow',  
-  velocity: { x: Math.random() * 2 - 0.9, y: Math.random() * 2 - 0.9 },
-};
+class cell {
+	constructor(x, y, width, height, isPurple) {
+		this.x = x;
+		this.y = y;
+		this.width = width;
+		this.height = height;
+		this.color = isPurple ? "purple" : "yellow";
+	}
+	
+	Draw(ctx) {
+		ctx.fillStyle = this.color;
+		ctx.fillRect(this.x, this.y, this.width, this.height);
+	}
+}
+
+class movingCell extends cell {
+	constructor(x, y, width, height, isPurple) {
+		super(x, y, width, height, isPurple);
+		const vectorLength = Math.sqrt(Math.pow(blockSpeed, 2) * 2);
+		const angle = Math.random() * Math.PI * 2;
+		this.vx = vectorLength * Math.cos(angle);
+		this.vy = vectorLength * Math.sin(angle);
+	}
+}
+
+const purpleBlock = new movingCell(canvas.width - blockSize,canvas.height / 2- blockSize/2,blockSize,blockSize, true); 
+
+const yellowBlock = new movingCell(0,canvas.height / 2 - blockSize/2,blockSize,blockSize, false); 
 
 function drawGrid() {
   for (let y = 0; y < gridHeight; y++) {
     for (let x = 0; x < gridWidth; x++) {
-      ctx.fillStyle = grid[y][x];
-      ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+		cellGrid[y][x].Draw(ctx);
     }
   }
 }
 
-function drawBlock(block) {
-  ctx.fillStyle = block.color;
-  ctx.fillRect(block.position.x, block.position.y, block.size.width, block.size.height);
-}
-
 function checkCollision(x, y, color) {
+	/*
   if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) {
     return false;
   }
@@ -46,9 +58,14 @@ function checkCollision(x, y, color) {
     return true;
   }
   return false;
+  */
 }
 
 function updateBlock(block) {
+	const gX = (block.x + block.vx) / block.width;
+	const gY = (block.y + block.vy) / block.height;
+//	console.log($'X:{gX}; Y:{gY}');
+	/*
   const { x, y } = block.position;
   const { width, height } = block.size;
   const { x: vx, y: vy } = block.velocity;
@@ -83,7 +100,7 @@ function updateBlock(block) {
   if (newY + height > canvas.height) {
     block.position.y = canvas.height - height;
     block.velocity.y = -block.velocity.y;
-  }
+  }*/
 }
 
 function update() {
@@ -93,22 +110,24 @@ function update() {
   updateBlock(yellowBlock);
   
   drawGrid();
-  drawBlock(purpleBlock);
-  drawBlock(yellowBlock);
+  purpleBlock.Draw(ctx);
+  yellowBlock.Draw(ctx);
 
   requestAnimationFrame(update);
 }
 
 function generateVector(block) {
+	/*
   const vectorLength = Math.sqrt(Math.pow(blockSpeed, 2) * 2);
   const angle = Math.random() * Math.PI * 2;
   block.velocity.x = vectorLength * Math.cos(angle);
   block.velocity.y = vectorLength * Math.sin(angle);
+  */
 }
 
 for (let y = 0; y < gridHeight; y++) {
   for (let x = 0; x < gridWidth; x++) {
-      grid[y][x] = (x >= (gridWidth / 2)) ? 'yellow' : 'purple';
+	  cellGrid[y][x] = new cell(x * blockSize, y * blockSize, blockSize, blockSize, (x < (gridWidth / 2)))
   }
 }
 generateVector(purpleBlock)
